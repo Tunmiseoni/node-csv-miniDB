@@ -1,6 +1,6 @@
 {
   "name": "node_csv_fs_dbms",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
@@ -15,5 +15,8 @@
   "devDependencies": {
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
   }
 }
