@@ -6,7 +6,7 @@ import { z } from "zod";
 import Error from "../utils/models/error";
 import { Name, Data } from "../utils/models/create";
 import { format } from "../utils/formatter";
-
+import { validate } from "../utils/validator";
 
 function createTable(
   name: z.infer<typeof Name>,
@@ -14,16 +14,10 @@ function createTable(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      if (typeof name !== "string" || name.trim() === "")
-        return reject(new Error("Invalid table name provided"));
+      validate(name, Name);
+      if (data) validate(data, Data);
 
-      if (data) {
-        const schemaValidation = Data.safeParse(data);
-        if (!schemaValidation.success)
-          return reject(new Error(`${schemaValidation.error.message}`));
-      }
-
-      name = path.join("./store", name).replace(/\\/g, "/");
+      name = path.posix.join("./store", name);
       if (!name.endsWith(".csv")) name += ".csv";
 
       fs.stat(name, (err: Error) => {
@@ -44,61 +38,31 @@ function createTable(
             resolve("Table created successfully");
           });
         } else if (Array.isArray(data)) {
-          fs.appendFile(
-            name,
-            (data.includes("id") ? "" : "id,") + format(data.join() + "\n"),
-            (err: Error) => {
-              if (err)
-                return reject(
-                  new Error("Failed to append data to file: " + err.message)
-                );
-              resolve("Table and columns created successfully");
-            }
-          );
+          appendHeadersAndData(name, data);
         } else {
-          const keys =
-            format((Object.keys(data).includes("id") ? "" : "id,") +
-            Object.keys(data).join(",") +
-            "\n");
-          fs.appendFile(name, keys, (err: Error) => {
-            if (err)
-              return reject(
-                new Error("Failed to append columns to file: " + err.message)
-              );
-          });
-
+          const keys = Object.keys(data);
           Object.keys(data).forEach((key) => {
-            if (!Array.isArray(data[key])) {
-              data[key] = [`${data[key]}`];
-            }
+            if (!Array.isArray(data[key])) data[key] = [`${data[key]}`];
           });
 
-          const max_length = Math.max(
+          const maxLength = Math.max(
             ...Object.values(
               data as { [key: string]: string[] | number[] | boolean[] }
             ).map((value) => value.length)
           );
 
           const rows = [];
-          for (let i = 0; i < max_length; i++) {
-            let row: (string | number | boolean)[] = [
-              Object.keys(data).includes("id") ? "" : i + 1,
-            ];
-            Object.values(
-              data as { [key: string]: string[] | number[] | boolean[] }
-            ).forEach((value) => {
-              row.push(format(`${value[i] ?? ""}`));
+          for (let i = 0; i < maxLength; i++) {
+            const row = [keys.includes("id") ? "" : i + 1];
+            Object.values(data).forEach((value: any) => {
+              row.push(value[i] ?? "");
             });
             rows.push(row.join(",") + "\n");
           }
 
-          fs.appendFile(name, rows.join(""), (err: Error) => {
-            if (err)
-              return reject(
-                new Error("Failed to append rows to file: " + err.message)
-              );
-            resolve("Table, columns, and rows created successfully");
-          });
+          appendHeadersAndData(name, keys, rows)
+            .then((message: string) => resolve(message))
+            .catch((err) => reject(err));
         }
       });
     } catch (err) {
@@ -108,3 +72,18 @@ function createTable(
 }
 
 module.exports = { createTable };
+
+const appendHeadersAndData = (
+  name: z.infer<typeof Name>,
+  keys: string[],
+  rows: string[] = []
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const headers = (keys.includes("id") ? "" : "id,") + keys.join(",") + "\n";
+    const content = headers + rows.join("");
+    fs.appendFile(name, content, (err: Error) => {
+      if (err) reject(new Error("Failed to write to file: " + err.message));
+      resolve("Table created successfully");
+    });
+  });
+};

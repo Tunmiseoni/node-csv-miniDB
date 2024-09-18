@@ -1,6 +1,9 @@
-export function format(field: string) {
-  if (field.includes(",") || field.includes('"') || field.includes("\n")) {
-    return `"${field.replace(/"/g, '""')}"`;
+export function format(data: string | string[]) {
+  if (Array.isArray(data)) {
+    return data.map((el) => {
+      return el.includes(",") ? `"${el}"` : el;
+    });
+  } else {
+    return data.includes(",") ? `"${data}"` : data;
   }
-  return field;
 }
