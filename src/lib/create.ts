@@ -4,11 +4,11 @@ const path = require("path");
 import { z } from "zod";
 
 import Error from "../utils/models/error";
-import { Name, Data } from "../utils/models/create";
 import { format } from "../utils/formatter";
 import { validate } from "../utils/validator";
+import { Name, Data } from "../utils/models/create";
 
-function createTable(
+export function createTable(
   name: z.infer<typeof Name>,
   data: z.infer<typeof Data>
 ): Promise<string> {
@@ -38,7 +38,9 @@ function createTable(
             resolve("Table created successfully");
           });
         } else if (Array.isArray(data)) {
-          appendHeadersAndData(name, data);
+          appendHeadersAndData(name, format(data) as string[])
+            .then((message: string) => resolve(message))
+            .catch((err) => reject(err));
         } else {
           const keys = Object.keys(data);
           Object.keys(data).forEach((key) => {
@@ -55,12 +57,12 @@ function createTable(
           for (let i = 0; i < maxLength; i++) {
             const row = [keys.includes("id") ? "" : i + 1];
             Object.values(data).forEach((value: any) => {
-              row.push(value[i] ?? "");
+              row.push(format(`${value[i] ?? ""}`) as string);
             });
-            rows.push(row.join(",") + "\n");
+            rows.push(row.join(",").replace(/[\r\n]+/g, '  ') + "\n");
           }
 
-          appendHeadersAndData(name, keys, rows)
+          appendHeadersAndData(name, format(keys) as string[], rows)
             .then((message: string) => resolve(message))
             .catch((err) => reject(err));
         }
@@ -70,8 +72,6 @@ function createTable(
     }
   });
 }
-
-module.exports = { createTable };
 
 const appendHeadersAndData = (
   name: z.infer<typeof Name>,

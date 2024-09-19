@@ -1,31 +1,30 @@
-// const fs = require("fs");
-// import { z } from "zod";
+import fs from "fs";
+import path from "path";
+import { z } from "zod";
+import Error from "../utils/models/error";
+import { validate } from "../utils/validator";
+import { deformat } from "../utils/formatter";
+import { Name } from "../utils/models/read";
 
-// import Error from "../utils/models/error";
-// import schema from "../utils/models/read";
+export function readTable(name: string): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    try {
+      validate(name, Name);
 
-// function read(name: string, data: z.infer<typeof schema>): any {
-//   try {
-//     const schemaValidation = schema.safeParse(data);
-//     if (!schemaValidation.success) throw new Error(`${schemaValidation.error}`);
+      let filePath = path.posix.join("./store", name);
+      if (!filePath.endsWith(".csv")) filePath += ".csv";
 
-//     if (!name.includes(".csv")) name += ".csv";
+      if (!fs.existsSync(filePath)) {
+        return reject(new Error(`The file '${filePath}' does not exist.`));
+      }
 
-//     fs.stat(`./store/${name}`, (err: Error) => {
-//       if (!err) {
-//         console.error(
-//           `The file or directory at './store/${name}' already exists.`
-//         );
-//         return;
-//       }
+      const fileContent = fs.readFileSync(filePath, { encoding: "utf-8" });
 
-//       if (err && err.code !== "ENOENT") {
-//         console.error(`Error accessing file './store/${name}':`, err);
-//         return;
-//       }
-//   } catch (err) {
-//     console.error(err);
-//   }
-// }
+      resolve([fileContent]);
 
-// module.exports = { read };
+    } catch (err) {
+      console.error(err);
+      reject(err);
+    }
+  });
+}

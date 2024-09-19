@@ -6,7 +6,7 @@ import { z } from "zod";
 import Error from "../utils/models/error";
 import { Name } from "../utils/models/delete";
 
-function deleteTable(name: z.infer<typeof Name>): Promise<string> {
+export function deleteTable(name: z.infer<typeof Name>): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       // if (Array.isArray(name)) {
@@ -71,5 +71,3 @@ function deleteColumn(name: z.infer<typeof Name>): Promise<string> {
     }
   });
 }
-
-module.exports = { deleteTable, deleteColumn };
