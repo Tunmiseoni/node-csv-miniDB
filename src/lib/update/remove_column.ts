@@ -74,10 +74,7 @@ export function removeColumn(data: {
             }
           }
 
-          console.log(cells.filter((el, i) => el).join(",") + "\n");
-          
-
-          writeStream.write(format(cells.filter((el, i) => !columnIndexes.includes(i) && el)).join(",") + "\n");
+          writeStream.write(format(cells.filter((el, i) => !columnIndexes.includes(i))).join(",") + "\n");
 
           lineCount++;
         });

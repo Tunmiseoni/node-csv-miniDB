@@ -163,7 +163,7 @@ const content = {
 //   })
 //   .catch((error: Error) => console.error(error.message));
 
-removeColumn({name: "users", column: ["qwe", "rty"]})
+removeColumn({name: "users", column: "phone"})
   .then((message: string) => {
     console.log(message);
   })
