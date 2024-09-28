@@ -1,16 +1,12 @@
-export function format(data: string | string[]): string | string[] {
-  if (Array.isArray(data)) {
-    return data.map((el) => {
-      return quote(el);
-    });
-  } else {
-    return quote(data);
-  }
+export function format(data: string | string[]): string[] {
+  // if (data === null || data === undefined) throw new Error("Data does not exist");
+  if (Array.isArray(data)) return data.map((el) => quote(el));
+  return [quote(data)];
 }
 
 export function deformat(data: string): string[] {
   const result = [];
-  let currentField = '';
+  let currentField = "";
   let insideQuotes = false;
 
   for (let i = 0; i < data.length; i++) {
@@ -23,14 +19,14 @@ export function deformat(data: string): string[] {
       } else {
         insideQuotes = !insideQuotes;
       }
-    } else if (char === ',' && !insideQuotes) {
+    } else if (char === "," && !insideQuotes) {
       result.push(currentField);
-      currentField = '';
+      currentField = "";
     } else {
       currentField += char;
     }
   }
-  result.push(currentField.slice(0, -2));
+  result.push(currentField);
 
   return result;
 }

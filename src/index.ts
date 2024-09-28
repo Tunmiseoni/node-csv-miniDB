@@ -1,17 +1,15 @@
-const fs = require("fs");
+import fs from 'fs'
 
-import Error from "./utils/models/error";
-
-import { readTable } from "./lib/read";
 import { createTable } from "./lib/create";
+import { addRow, addColumn, removeColumn } from './lib/update';
 import { deleteTable } from "./lib/delete";
 
-fs.mkdir("./store", { recursive: true }, (err: Error) => {
+fs.mkdir("./store", { recursive: true }, (err) => {
   if (err) throw err;
 });
 
-const data = {
-  "name": [
+const content = {
+  name: [
     "Tunmise",
     "Folake",
     "Bola",
@@ -154,13 +152,24 @@ const data = {
   ],
 };
 
-createTable("users", data)
+// createTable({ name: "users", content })
+//   .then((message: string) => {
+//     console.log(message);
+//     // readTable("users")
+//     //   .then((message: string[]) => {
+//     //     console.log(message);
+//     //   })
+//     //   .catch((error: Error) => console.error(error.message));
+//   })
+//   .catch((error: Error) => console.error(error.message));
+
+removeColumn({name: "users", column: ["qwe", "rty"]})
   .then((message: string) => {
     console.log(message);
-    // readTable("users")
-    //   .then((message: string[]) => {
-    //     console.log(message);
-    //   })
-    //   .catch((error: Error) => console.error(error.message));
   })
   .catch((error: Error) => console.error(error.message));
+
+
+// addRow({name: "users", rows: "country_music"})
+//   .then((message: string) => console.log(message))
+//   .catch((error: Error) => console.error(error.message));

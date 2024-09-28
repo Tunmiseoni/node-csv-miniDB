@@ -1,5 +1,5 @@
 {
-  "name": "node_csv_fs_dbms",
+  "name": "node-csv-miniDB",
   "version": "0.0.1",
   "description": "",
   "main": "src/index.ts",
