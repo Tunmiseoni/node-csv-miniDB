@@ -89,7 +89,7 @@ export function removeColumn(data: {
                 new Error(`Error replacing original file: ${err.message}`)
               );
             }
-            resolve(`Columns removed successfully from '${name}'`);
+            resolve(`Columns removed from '${name} successfully'`);
           });
         });
       });

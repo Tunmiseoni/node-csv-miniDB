@@ -30,10 +30,10 @@ export function addColumn(data: {
         if (stats.size === 0)
           return reject(new Error(`The file '${name}' is empty.`));
 
-        const fileStream = fs.createReadStream(name);
+        const readStream = fs.createReadStream(name);
         const writeStream = fs.createWriteStream(tempFilePath);
 
-        fileStream.on("error", (err) => {
+        readStream.on("error", (err) => {
           reject(new Error(`Error reading file: ${err.message}`));
         });
 
@@ -42,7 +42,7 @@ export function addColumn(data: {
         );
 
         const rl = require("readline").createInterface({
-          input: fileStream,
+          input: readStream,
           crlfDelay: Infinity,
         });
 
@@ -88,7 +88,7 @@ export function addColumn(data: {
                 new Error(`Error replacing original file: ${err.message}`)
               );
             }
-            resolve(`Columns added successfully to '${name}'`);
+            resolve(`Columns added to '${name}' successfully`);
           });
         });
       });

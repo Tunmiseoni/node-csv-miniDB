@@ -1,5 +1,3 @@
-// TODO: Obtain types and columns from the file and use that to validate the data coming in the rows argument before appending to file
-
 import fs from "fs";
 import path from "path";
 
@@ -10,20 +8,18 @@ import { format, deformat } from "../../utils/formatter";
 
 export function addRow(data: {
   name: string;
-  rows: {} | {}[];
+  row: {} | {}[];
 }): Promise<string> {
   return new Promise(async (resolve, reject) => {
     try {
-      let { name, rows } = data;
+      let { name, row } = data;
 
       validate(name, z.string());
-      // if (rows) validate(rows, z.object());
-      if (!Array.isArray(rows)) rows = [rows];
+      validate(row, z.union([z.object({}), z.array(z.object({}))]));
+      const rows = Array.isArray(row) ? row : [row];
 
       name = path.posix.join("./store", name);
       if (!name.endsWith(".csv")) name += ".csv";
-
-      const tempFilePath = path.posix.join("./store", `temp_${Date.now()}.csv`);
 
       fs.stat(name, (err, stats) => {
         if (err)
@@ -33,70 +29,51 @@ export function addRow(data: {
           return reject(new Error(`The file '${name}' is empty.`));
 
         const readStream = fs.createReadStream(name);
-        const writeStream = fs.createWriteStream(tempFilePath);
-
-        const rl = require("readline").createInterface({
-          input: readStream,
-          crlfDelay: Infinity
-        });
-    
-        const lines: string[] = [];
-        let lineCount = 0;
-    
-        rl.on('line', (line: string) => {
-          console.log(lineCount);
-
-          lines.push(line);
-          lineCount++;
-              
-          if (lineCount >= 2) rl.close();
-        });
-    
-        rl.on('close', () =>{
-          lines.map((el)=>{
-            console.log(deformat(el));
-            
-          })
-          
-          rl.removeAllListeners()
-        });
-
-        rl.on("error", (err: NodeJS.ErrnoException) => reject(err));
+        const writeStream = fs.createWriteStream(name, { flags: "a" });
 
         readStream.on("error", (err) => {
           reject(new Error(`Error reading the source file: ${err.message}`));
         });
 
         writeStream.on("error", (err) => {
-          reject(new Error(`Error writing to destination file: ${err.message}`));
+          reject(
+            new Error(`Error writing to destination file: ${err.message}`)
+          );
         });
+
+        const rl = require("readline").createInterface({
+          input: readStream,
+          crlfDelay: Infinity,
+        });
+
+        rl.on("error", (err: NodeJS.ErrnoException) => {
+          reject(new Error(`Error reading columns: ${err.message}`));
+        });
+
+        let columns: string[] = [];
+        let content: string[] = [];
+
+        rl.on("line", (line: string) => {
+          columns = deformat(line);
+          rl.close();
+        });
+
+        rl.on("close", () => {
+          rows.map((row) => {
+            let formattedRow: string[] = [];
+            columns.map((col, i) => (formattedRow[i] = `${row[col]}`));
+            content.push(format(formattedRow).join(","));
+          });
+          
+          writeStream.write(content.join("\n") + "\n");
+          writeStream.end();
+          
+          rl.removeAllListeners();
+          });
 
         writeStream.on("finish", () => {
-          const writeStream = fs.createWriteStream(tempFilePath, {
-            flags: "a",
-          });
-
-          // writeStream.write(format(rows).join("\n") + "\n", () => {
-          //   writeStream.end();
-          // });
-
-          writeStream.on("error", (err) => {
-            reject(new Error(`Error writing to file: ${err.message}`));
-          });
-
-          writeStream.on("finish", () => {
-            fs.rename(tempFilePath, name, (err) => {
-              if (err) {
-                return reject(
-                  new Error(`Error replacing original file: ${err.message}`)
-                );
-              }
-              resolve(`Column added successfully to '${name}'`);
-            });
-          });
+          resolve(`Rows added to '${name} successfully'`);
         });
-
-        readStream.pipe(writeStream);
       });
     } catch (err) {
       reject(err);
