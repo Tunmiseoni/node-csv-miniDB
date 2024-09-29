@@ -153,25 +153,10 @@ fs.mkdir("./store", { recursive: true }, (err) => {
 // };
 
 // createTable({ name: "users", content })
-//   .then((message: string) => {
-//     console.log(message);
-//     // readTable("users")
-//     //   .then((message: string[]) => {
-//     //     console.log(message);
-//     //   })
-//     //   .catch((error: Error) => console.error(error.message));
-//   })
+//   .then((message: string) => console.log(message))
 //   .catch((error: Error) => console.error(error.message));
 
-// removeColumn({name: "users", column: "phone"})
-//   .then((message: string) => {
-//     console.log(message);
-//   })
-//   .catch((error: Error) => console.error(error.message));
-
-
-
-const data = [
+const row = [
   {
     salary: 55000,
     laptop: 'Dell',
@@ -182,8 +167,7 @@ const data = [
     marital_status: 'Single',
     height: 175,
     country: 'USA',
-    email: 'john.doe@example.com',
-    id: 101,
+    test: "testing"
   },
   {
     country: 'Canada',
@@ -208,12 +192,13 @@ const data = [
     occupation: 'Data Scientist',
     laptop: 'Lenovo',
     height: 165,
-    id: 103,
     phone: '+1122334455',
   }
 ]
 
+// console.time("operation");
+// console.timeEnd("operation");
 
-addRow({name: "users", row: data})
+addRow({name: "users", row})
   .then((message: string) => console.log(message))
   .catch((error: Error) => console.error(error.message));

@@ -4,12 +4,11 @@ import path from "path";
 import { z } from "zod";
 
 import { validate } from "../../utils/validator";
-import { Table } from "../../utils/models/delete";
 
-export function deleteTable(name: z.infer<typeof Table>): Promise<string> {
+export function deleteTable(name: string): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      validate(name, Table);
+      validate(name, z.string());
 
       name = path.posix.join("./store", name);
       if (!name.endsWith(".csv")) name += ".csv";

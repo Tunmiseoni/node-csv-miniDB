@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import { z } from "zod";
+import { v4 as uuidv4 } from 'uuid';
 
 import { validate } from "../../utils/validator";
 import { format, deformat } from "../../utils/formatter";
@@ -21,6 +22,8 @@ export function addRow(data: {
       name = path.posix.join("./store", name);
       if (!name.endsWith(".csv")) name += ".csv";
 
+      const tempFilePath = path.posix.join("./store", `temp_${Date.now()}.csv`);
+
       fs.stat(name, (err, stats) => {
         if (err)
           return reject(new Error(`Error checking file stats: ${err.message}`));
@@ -29,7 +32,7 @@ export function addRow(data: {
           return reject(new Error(`The file '${name}' is empty.`));
 
         const readStream = fs.createReadStream(name);
-        const writeStream = fs.createWriteStream(name, { flags: "a" });
+        const writeStream = fs.createWriteStream(tempFilePath);
 
         readStream.on("error", (err) => {
           reject(new Error(`Error reading the source file: ${err.message}`));
@@ -59,20 +62,40 @@ export function addRow(data: {
         });
 
         rl.on("close", () => {
-          rows.map((row) => {
-            let formattedRow: string[] = [];
-            columns.map((col, i) => (formattedRow[i] = `${row[col]}`));
-            content.push(format(formattedRow).join(","));
-          });
-          
-          writeStream.write(content.join("\n") + "\n");
-          writeStream.end();
-          
           rl.removeAllListeners();
-          });
 
-        writeStream.on("finish", () => {
-          resolve(`Rows added to '${name} successfully'`);
+          fs.createReadStream(name)
+            .pipe(writeStream)
+            .on("finish", () => {
+              rows.map((row) => {
+                let formattedRow: string[] = [];
+                if(!row["id"]) row["id"] = uuidv4()
+                columns.map((col, i) => (formattedRow[i] = `${row[col] || ""}`));
+                content.push(format(formattedRow).join(","));
+              });
+
+              fs.createWriteStream(tempFilePath, { flags: "a" }).write(
+                content.join("\n") + "\n",
+                (err) => {
+                  if (err) {
+                    return reject(
+                      new Error(`Error writing new rows: ${err.message}`)
+                    );
+                  }
+
+                  fs.rename(tempFilePath, name, (err) => {
+                    if (err) {
+                      return reject(
+                        new Error(
+                          `Error replacing original file: ${err.message}`
+                        )
+                      );
+                    }
+                    resolve(`Rows added to '${name} successfully'`);
+                  });
+                }
+              );
+            });
         });
       });
     } catch (err) {

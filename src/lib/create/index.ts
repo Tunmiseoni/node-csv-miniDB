@@ -2,10 +2,11 @@ import fs from "fs";
 import path from "path";
 
 import { z } from "zod";
+import { v4 as uuidv4 } from 'uuid';
 
 import { format } from "../../utils/formatter";
 import { validate } from "../../utils/validator";
-// import { Name, Data } from "../../utils/models/create";
+
 
 let Content = z.union([
   z.record(
@@ -75,7 +76,7 @@ export function createTable(data: {
 
           const rows = [];
           for (let i = 0; i < maxLength; i++) {
-            const row = [keys.includes("id") ? "" : i + 1];
+            const row = [keys.includes("id") ? "" : uuidv4()];
             Object.values(content).forEach((value: any) => {
               row.push(...format(`${value[i] ?? ""}`));
             });
