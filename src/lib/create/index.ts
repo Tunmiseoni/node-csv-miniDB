@@ -53,9 +53,11 @@ export async function createTable(data: {
     name = path.posix.join("./store", name);
     if (!name.endsWith(".csv")) name += ".csv";
 
-    const fileExists = await new Promise<boolean>((resolve) => {
-      fs.stat(name, (err) => resolve(!err));
-    });
+    // const fileExists = await new Promise<boolean>((resolve) => {
+    //   fs.stat(name, (err) => resolve(!err));
+    // });
+
+    const fileExists = fs.existsSync(name);
 
     if (fileExists) {
       return Promise.reject(
@@ -71,7 +73,6 @@ export async function createTable(data: {
     });
 
     unlockFile = await lockfile.lock(name, { retries: 3 });
-    
     if (!unlockFile) throw new Error("Failed to acquire lock on the file.");
 
     if (!content) {
