@@ -10,6 +10,7 @@ import { format } from "../../utils/formatter";
 import { validate } from "../../utils/validator";
 import saveTypeLib from "../../utils/save_type_lib";
 import safelyUnlock from "../../utils/safely_unlock_file";
+import safelyLock from "../../utils/safely_lock_file";
 
 const ContentSchema = {
   headers_only: z.array(z.string()),
@@ -41,11 +42,10 @@ export async function createTable(data: {
   types?: z.infer<(typeof ContentSchema)["headers_and_types"]>;
 }): Promise<string> {
   let unlockFile: (() => Promise<void>) | undefined;
+  let { name, content, types } = data;
 
   try {
-    let { name, content, types } = data;
-
-    validate(name, z.string());
+    validate(name, z.string().min(1, { message: "String cannot be empty" }));
     if (content) validate(content, ContentSchemaUnion);
     if (types) validate(types, z.record(z.string()));
 
@@ -53,13 +53,7 @@ export async function createTable(data: {
     name = path.posix.join("./store", name);
     if (!name.endsWith(".csv")) name += ".csv";
 
-    // const fileExists = await new Promise<boolean>((resolve) => {
-    //   fs.stat(name, (err) => resolve(!err));
-    // });
-
-    const fileExists = fs.existsSync(name);
-
-    if (fileExists) {
+    if (fs.existsSync(name)) {
       return Promise.reject(
         new Error(`The file or directory at './store/${name}' already exists.`)
       );
@@ -72,8 +66,7 @@ export async function createTable(data: {
       });
     });
 
-    unlockFile = await lockfile.lock(name, { retries: 3 });
-    if (!unlockFile) throw new Error("Failed to acquire lock on the file.");
+    unlockFile = await safelyLock(name);
 
     if (!content) {
       await new Promise<void>((resolve, reject) => {
@@ -82,29 +75,32 @@ export async function createTable(data: {
           resolve();
         });
       });
-      return "Table created successfully";
+      return `Table: ${lib_name} created successfully`;
     }
 
     if (ContentSchema.headers_only.safeParse(content).success) {
-      console.log(`Entered 'headers_only' block for table: ${lib_name}`);
       await appendHeadersAndData(
         name,
         format(content as z.infer<(typeof ContentSchema)["headers_only"]>)
       );
-      await saveTypeLib(lib_name, content as string[]);
-      return "Table created successfully";
+      await saveTypeLib(
+        lib_name,
+        (content as string[]).reduce((acc, el) => {
+          acc[el] = "any";
+          return acc;
+        }, {} as Record<string, string>)
+      );
+      return `Table: ${lib_name} created successfully`;
     }
 
     if (ContentSchema.headers_and_types.safeParse(content).success) {
-      console.log(`Entered 'headers_and_types' block for table: ${lib_name}`);
-      validate(Object.values(content), z.array(Types));
+      validate(Object.values(content), z.array(Types.enum));
       await appendHeadersAndData(name, format(Object.keys(content)));
       await saveTypeLib(lib_name, content);
-      return "Table created successfully";
+      return `Table: ${lib_name} created successfully`;
     }
 
     if (ContentSchema.headers_and_content.safeParse(content).success) {
-      console.log(`Entered 'headers_and_content' block for table: ${lib_name}`);
       let contentData = content as Record<
         string,
         string | number | boolean | string[] | number[] | boolean[]
@@ -112,11 +108,14 @@ export async function createTable(data: {
 
       const keys = Object.keys(contentData);
       Object.keys(contentData).forEach((key) => {
-        if (!Array.isArray(contentData[key])) contentData[key] = [`${contentData[key]}`];
+        if (!Array.isArray(contentData[key]))
+          contentData[key] = [`${contentData[key]}`];
       });
 
       const maxLength = Math.max(
-        ...Object.values(contentData as { [key: string]: string[] | number[] | boolean[] }).map((value) => value.length)
+        ...Object.values(
+          contentData as { [key: string]: string[] | number[] | boolean[] }
+        ).map((value) => value.length)
       );
 
       const rows: string[] = [];
@@ -131,33 +130,61 @@ export async function createTable(data: {
         rows.push(row.join(",").replace(/[\r\n]+/g, "  ") + "\n");
       }
 
-      await appendHeadersAndData(name, format(keys) as string[], rows);
-
       if (types) {
-        validate(Object.values(types), z.array(Types));
-        if (
-          !Object.keys(types).every((item) =>
-            Object.keys(contentData).includes(item)
-          )
-        ) {
-          return Promise.reject(
-            new Error(
-              "A parameter in types object doesn't match or isn't present in content object"
-            )
-          );
-        }
-        await saveTypeLib(lib_name, contentData);
+        Object.keys(contentData).some((item) => {
+          const typeKey = (types as Record<string, string>)[item];
+
+          if (!(typeKey in Types.validationMap))
+            throw new Error(
+              `Invalid type '${typeKey}' for item '${item}'. Expected one of: ${Object.keys(
+                Types.validationMap
+              ).join(", ")}`
+            );
+
+          (contentData[item] as []).some(async (parameter) => {
+            if (
+              !Types.validationMap[
+                typeKey as keyof typeof Types.validationMap
+              ].safeParse(parameter).success
+            ) {
+              await safelyUnlock(unlockFile, name).then(() => {
+                unlockFile = undefined;
+
+                fs.unlink(name, (err) => {
+                  console.log(`Attempting to delete file: ${name}`);
+                  if (err)
+                    throw new Error(
+                      `Error deleting file '${name}': ${err.message}`
+                    );
+
+                  return Promise.reject(
+                    new Error(
+                      `Parameter '${parameter}' in '${item}' does not match the expected type '${typeKey}'.`
+                    )
+                  );
+                });
+              });
+            }
+          });
+        });
+
+        await appendHeadersAndData(name, format(keys) as string[], rows);
+        await saveTypeLib(lib_name, types);
+      } else {
+        await appendHeadersAndData(name, format(keys) as string[], rows);
       }
-      return "Table created successfully";
+      return `Table: ${lib_name} created successfully`;
     } else {
       return Promise.reject(
         new Error("Content passed does not match requested format")
       );
     }
   } catch (err) {
-    throw new Error(`Error creating table: ${err}`);
+    throw new Error(
+      `Error creating table: ${err instanceof Error ? err.message : err}`
+    );
   } finally {
-    if (unlockFile) await safelyUnlock(unlockFile);
+    if (unlockFile) await safelyUnlock(unlockFile, name);
   }
 }
 
