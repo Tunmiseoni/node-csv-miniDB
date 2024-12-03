@@ -36,10 +36,10 @@ insertColumn('users.csv', ['address']);
 
 <h2 style="font-size: 2em;">Contributing</h2>
 <p style="font-size: 1.2em;">
-  We welcome contributions! Please read our <a href="https://github.com/yourusername/node-csv-miniDB/blob/main/CONTRIBUTING.md">Contributing Guide</a> to learn how you can help improve node-csv-miniDB.
+  We welcome contributions! Please read our <a href="https://github.com/Tunmiseoni/node-csv-miniDB/blob/main/CONTRIBUTING.md">Contributing Guide</a> to learn how you can help improve node-csv-miniDB.
 </p>
 
 <h2 style="font-size: 2em;">License</h2>
 <p style="font-size: 1.2em;">
-  This project is licensed under the MIT License - see the <a href="https://github.com/yourusername/node-csv-miniDB/blob/main/LICENSE">LICENSE</a> file for details.
+  This project is licensed under the MIT License - see the <a href="https://github.com/Tunmiseoni/node-csv-miniDB/blob/main/LICENSE">LICENSE</a> file for details.
 </p>
