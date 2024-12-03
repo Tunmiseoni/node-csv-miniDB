@@ -1,4 +1,4 @@
-<h1 style="font-size: 2.5em;">node-csv-miniDB</h1>
+<h1 style="font-size: 2.5em;">node-csv-miniDB - { in progress }</h1>
 
 <h2 style="font-size: 2em;">Overview</h2>
 <p style="font-size: 1.2em;">
